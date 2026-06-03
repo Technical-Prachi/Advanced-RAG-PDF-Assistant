@@ -29,7 +29,11 @@ embedding_model = HuggingFaceEmbeddings(
 # =========================
 # QDRANT
 # =========================
-client_qdrant = QdrantClient(url="http://localhost:6333")
+client_qdrant = QdrantClient(
+    url=os.getenv("QDRANT_URL"),
+    api_key=os.getenv("QDRANT_API_KEY")
+)
+# client_qdrant = QdrantClient(url="http://localhost:6333")
 
 COLLECTION_NAME = "learning_rag_3"
 
