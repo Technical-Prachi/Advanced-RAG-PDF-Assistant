@@ -7,45 +7,47 @@ from qdrant_client.models import VectorParams, Distance
 from langchain_qdrant import QdrantVectorStore
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-
 from google import genai
 
 load_dotenv()
 
 # =========================
-# GEMINI LLM (for answering)
+# GEMINI CLIENT
 # =========================
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
 # =========================
-# EMBEDDINGS (STABLE FIX)
+# LAZY EMBEDDINGS (IMPORTANT FIX)
 # =========================
-embedding_model = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
+embedding_model = None
+
+def get_embedding_model():
+    global embedding_model
+    if embedding_model is None:
+        from langchain_community.embeddings import HuggingFaceEmbeddings
+        embedding_model = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
+        )
+    return embedding_model
+
 
 # =========================
-# QDRANT
+# QDRANT CLIENT
 # =========================
 client_qdrant = QdrantClient(
     url=os.getenv("QDRANT_URL"),
     api_key=os.getenv("QDRANT_API_KEY")
 )
-# client_qdrant = QdrantClient(url="http://localhost:6333")
 
 COLLECTION_NAME = "learning_rag_3"
 
 
+# =========================
+# COLLECTION SETUP
+# =========================
 def create_collection():
-    """
-    Creates collection if not exists
-    """
-
-    existing = [
-        c.name for c in client_qdrant.get_collections().collections
-    ]
+    existing = [c.name for c in client_qdrant.get_collections().collections]
 
     if COLLECTION_NAME not in existing:
         client_qdrant.create_collection(
@@ -59,14 +61,7 @@ def create_collection():
 
 
 def reset_collection():
-    """
-    Deletes old vectors and creates fresh collection.
-    Called every time a new PDF is uploaded.
-    """
-
-    existing = [
-        c.name for c in client_qdrant.get_collections().collections
-    ]
+    existing = [c.name for c in client_qdrant.get_collections().collections]
 
     if COLLECTION_NAME in existing:
         client_qdrant.delete_collection(COLLECTION_NAME)
@@ -79,35 +74,30 @@ def reset_collection():
             distance=Distance.COSINE
         )
     )
-
     print("✅ Fresh collection created")
 
 
+# run once safely
 create_collection()
 
-vector_db = QdrantVectorStore(
-    client=client_qdrant,
-    collection_name=COLLECTION_NAME,
-    embedding=embedding_model,
-)
+
+# =========================
+# VECTOR DB (LAZY)
+# =========================
+def get_vector_db():
+    return QdrantVectorStore(
+        client=client_qdrant,
+        collection_name=COLLECTION_NAME,
+        embedding=get_embedding_model()
+    )
+
 
 # =========================
 # PDF PROCESSING
 # =========================
 def process_pdf(filepath: str):
 
-    global vector_db
-
-    # IMPORTANT:
-    # remove old PDF vectors before inserting new PDF
     reset_collection()
-
-    # reconnect vector store after recreation
-    vector_db = QdrantVectorStore(
-        client=client_qdrant,
-        collection_name=COLLECTION_NAME,
-        embedding=embedding_model,
-    )
 
     loader = PyPDFLoader(filepath)
     docs = loader.load()
@@ -123,24 +113,31 @@ def process_pdf(filepath: str):
 
     print("TOTAL CHUNKS:", len(chunks))
 
+    vector_db = get_vector_db()
     vector_db.add_documents(chunks)
 
     info = client_qdrant.get_collection(COLLECTION_NAME)
-
     print("TOTAL VECTORS:", info.points_count)
 
     return True
+
+
 # =========================
 # QUERY PROCESSING (RAG)
 # =========================
 def process_query(query: str):
+
     print("🔎 Searching:", query)
+
+    vector_db = get_vector_db()
 
     search_results = vector_db.similarity_search_with_score(
         query=query,
         k=10
     )
+
     print("RESULTS FOUND:", len(search_results))
+
     context = "\n\n".join([
         f"""
 Page Content:
@@ -338,10 +335,9 @@ When giving analysis:
 Question:
 {query}
 """,
-    config={
-        "temperature": 0.4
-    }
-
+        config={
+            "temperature": 0.4
+        }
     )
 
     return response.text
