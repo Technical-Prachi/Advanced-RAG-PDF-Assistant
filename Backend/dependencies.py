@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 
-from config import settings
+from .config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/google-login")
 

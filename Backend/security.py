@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from jose import jwt
-from config import settings
+from .config import settings
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 

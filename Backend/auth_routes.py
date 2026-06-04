@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from security import create_access_token
-from auth import verify_google_token
+from .security import create_access_token
+from .auth import verify_google_token
 
 router = APIRouter()
 

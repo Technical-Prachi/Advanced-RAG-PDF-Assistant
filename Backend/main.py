@@ -5,7 +5,7 @@ from pymongo import MongoClient
 import os, traceback
 
 from Backend.queues.worker import process_query, process_pdf
-from auth_routes import router as auth_router
+from Backend.auth_routes import router as auth_router
 
 import os
 
