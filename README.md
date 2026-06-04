@@ -83,17 +83,25 @@ Users can upload PDF documents, ask questions about their content, and receive i
 ## 📂 Project Structure
 
 ```bash
-project/
+Pdf chatbot (mini rag)/
 │
-├── backend/
+├── Backend/
 │   ├── main.py
-│   ├── worker.py
-│   ├── auth.py
 │   ├── auth_routes.py
+│   ├── auth.py
 │   ├── security.py
-│   ├── dependencies.py
 │   ├── config.py
-│   └── requirements.txt
+│   ├── dependencies.py
+│   │
+│   ├── queues/
+│   │   ├── worker.py
+│   │   └── __init__.py
+│   │
+│   ├── client/
+│   │   └── rq_client.py
+│   │
+│   └── __init__.py
+│
 │
 ├── frontend/
 │   ├── src/
@@ -101,8 +109,10 @@ project/
 │   ├── package.json
 │   └── vite.config.js
 │
+├── requirements.txt
 ├── docker-compose.yml
 └── README.md
+└── .gitignore
 ```
 
 ---
@@ -159,7 +169,7 @@ pip install -r requirements.txt
 ### Start Backend Server
 
 ```bash
-uvicorn main:app --reload
+uvicorn Backend.main:app --reload
 ```
 
 Backend will run on:
